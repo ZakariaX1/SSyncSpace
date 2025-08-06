@@ -117,6 +117,127 @@ npm run db:migrate
 npm run db:studio
 ```
 
+## 🔧 Service Management
+
+### Starting Services
+
+**Start everything (recommended for development):**
+```bash
+# Start databases in background
+docker-compose up postgres redis -d
+
+# Start Next.js development server
+npm run dev
+```
+
+**Alternative - Start everything with Docker:**
+```bash
+# Start all services (databases + Next.js)
+docker-compose up
+```
+
+### Stopping Services
+
+**Stop Next.js development server:**
+```bash
+# Press Ctrl+C in the terminal where npm run dev is running
+```
+
+**Stop Docker containers:**
+```bash
+# Stop and remove containers
+docker-compose down
+
+# Stop containers but keep them for restart
+docker-compose stop
+```
+
+**Stop specific services:**
+```bash
+# Stop only databases
+docker-compose stop postgres redis
+
+# Stop only a specific service
+docker-compose stop postgres
+```
+
+### Restarting Services
+
+**Restart Next.js development server:**
+```bash
+# Stop with Ctrl+C, then run again
+npm run dev
+```
+
+**Restart Docker containers:**
+```bash
+# Restart all services
+docker-compose restart
+
+# Restart specific services
+docker-compose restart postgres redis
+
+# Full restart (stop, remove, and recreate)
+docker-compose down && docker-compose up -d
+```
+
+### Monitoring Services
+
+**Check service status:**
+```bash
+# List running containers
+docker-compose ps
+
+# View logs for all services
+docker-compose logs
+
+# View logs for specific service
+docker-compose logs postgres
+docker-compose logs redis
+
+# Follow logs in real-time
+docker-compose logs -f postgres
+```
+
+**Check Next.js server:**
+```bash
+# Development server runs on http://localhost:3000
+# Check terminal output for compilation status and errors
+```
+
+### Troubleshooting
+
+**If services won't start:**
+```bash
+# Check for port conflicts
+sudo lsof -i :3000  # Next.js port
+sudo lsof -i :5432  # PostgreSQL port
+sudo lsof -i :6379  # Redis port
+
+# Reset Docker containers completely
+docker-compose down -v  # Removes volumes too (⚠️  deletes data)
+docker-compose up -d postgres redis
+```
+
+**If database connection fails:**
+```bash
+# Recreate database
+docker-compose down postgres
+docker-compose up -d postgres
+npm run db:push
+```
+
+**Clean restart everything:**
+```bash
+# Stop everything
+docker-compose down
+pkill -f "next-server"  # Kill any hanging Next.js processes
+
+# Start fresh
+docker-compose up -d postgres redis
+npm run dev
+```
+
 ## 🏢 Features
 
 ### Portfolio Section
