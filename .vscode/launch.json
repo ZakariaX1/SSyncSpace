@@ -1,0 +1,31 @@
+{
+  "version": "0.1",
+  "compounds": [
+    {
+      "name": "Dev All",
+      "configurations": ["Backend Dev", "Frontend Dev"]
+    }
+  ],
+  "configurations": [
+    // Docker compose dev
+    // {},
+    // npm run dev backend
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Backend Dev",
+      "cwd": "${workspaceFolder}/backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"]
+    },
+    // npm run dev frontend
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Frontend Dev",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"]
+    }
+  ]
+}
