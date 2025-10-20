@@ -23,6 +23,7 @@ mkdir apps prisma docs
 ---
 
 ## ⚙️ Step 2: Initialize root Node project
+> <div style="color: red">NO NEED</div> dead weight since we're running both seperately anyway
 ```bash
 npm init -y
 ```
