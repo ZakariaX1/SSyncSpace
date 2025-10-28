@@ -22,7 +22,7 @@ function Home() {
           border: '1px solid var(--color-space-islam)'
         }}>
           <h4 style={{ color: 'var(--color-space-islam)', marginBottom: '1rem' }}>
-            Today's Prayer Times
+            Today's Prayer Times [DEMO, NOT ACTUAL TIMES]
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
             {Object.entries(prayerTimes.times).map(([prayer, time]) => (
