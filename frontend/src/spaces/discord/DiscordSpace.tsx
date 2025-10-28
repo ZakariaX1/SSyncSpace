@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
+import Events from './pages/Events';
 import DiscordNav from './components/DiscordNav';
 
 function DiscordSpace() {
@@ -8,6 +9,7 @@ function DiscordSpace() {
       <DiscordNav />
       <Routes>
         <Route index element={<Home />} />
+        <Route path="events" element={<Events />} />
       </Routes>
     </div>
   );
