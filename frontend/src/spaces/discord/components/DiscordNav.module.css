@@ -1,0 +1,60 @@
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-space-discord);
+  border-left: 4px solid var(--color-space-discord);
+  padding-left: 1rem;
+}
+
+.backLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.backLink:hover {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.navGroup {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.spaceTitle {
+  color: var(--color-space-discord);
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.navLinks {
+  display: flex;
+  gap: 1rem;
+}
+
+.navLink {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.navLink:hover {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.navLink.active {
+  background-color: var(--color-space-discord);
+  color: white;
+}

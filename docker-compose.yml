@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: ssyncspace_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    volumes:
+      - ./frontend:/app
+    command: npm run dev
+
+  backend:
+    build: ./backend
+    container_name: ssyncspace_backend
+    ports:
+      - "3001:3001"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL_DISCORD=postgresql://postgres:password@db:5432/ssyncspace?schema=discord
+      - DATABASE_URL_ISLAM=postgresql://postgres:password@db:5432/ssyncspace?schema=islam
+    volumes:
+      - ./backend:/app
+    command: npx prisma migrate deploy && npm run dev
+
+  db:
+    image: postgres:16-alpine
+    container_name: ssyncspace_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ssyncspace
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:

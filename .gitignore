@@ -1,0 +1,5 @@
+# Base gitignore for common files to ignore
+node_modules
+dist
+.env
+.env.local
