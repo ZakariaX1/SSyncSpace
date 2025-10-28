@@ -4,11 +4,11 @@ import type { ApiInfoResponse } from '../../../types/global';
 
 export class IslamApiClient extends BaseApiClient {
   async getInfo(): Promise<ApiInfoResponse> {
-    return this.request('/api/islam/info');
+    return this.getRequest('/api/islam/info');
   }
 
   async getPrayerTimes(): Promise<PrayerTimes> {
-    return this.request('/api/islam/prayer-times');
+    return this.getRequest('/api/islam/prayer-times');
   }
 
   // Ready for future modular expansion:

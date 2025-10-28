@@ -5,11 +5,11 @@ import type { ApiInfoResponse } from '../../../types/global';
 
 export class DiscordApiClient extends BaseApiClient {
   async getInfo(): Promise<ApiInfoResponse> {
-    return this.request('/api/discord/info');
+    return this.getRequest('/api/discord/info');
   }
 
   async getEvents(): Promise<DiscordEventsResponse> {
-    return this.request('/api/discord/events');
+    return this.getRequest('/api/discord/events');
   }
 
   // Ready for future modular expansion:
