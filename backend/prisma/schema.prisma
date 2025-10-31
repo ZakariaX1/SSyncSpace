@@ -1,0 +1,336 @@
+/*
+PRISMA CHEAT SHEET
+==================
+
+SETUP COMMANDS:
+- npm run db:setup-schemas    # Create PostgreSQL schema namespaces (run once)
+- npm run db:push            # Push schema changes to database
+- npm run db:generate        # Generate TypeScript client
+- npm run db:migrate         # Create migration files (production)
+- npm run db:studio          # Visual database browser
+
+RUN IN DOCKER:
+# 1. Install dependencies
+    docker-compose -f docker-compose.dev.yml exec backend npm install
+
+# 2. Setup PostgreSQL schemas
+    docker-compose -f docker-compose.dev.yml exec backend npm run db:setup-schemas
+
+# 3. Push schema to database
+    docker-compose -f docker-compose.dev.yml exec backend npm run db:push
+
+# 4. Generate TypeScript client (usually auto-runs after db:push)
+    docker-compose -f docker-compose.dev.yml exec backend npm run db:generate
+
+COMMON FIELD TYPES:
+- String, Int, Float, Boolean, DateTime
+- String[] (arrays), Json, Bytes
+- String? (optional), String @default("value")
+- @id, @unique, @default(now()), @updatedAt
+
+RELATIONSHIPS:
+- author User @relation(fields: [authorId], references: [id])
+- posts Post[] (one-to-many reverse)
+- @@unique([field1, field2]) (composite unique)
+
+INDEXES & MAPPING:
+- @@map("custom_table_name")
+- @map("custom_column_name") 
+- @@index([field1, field2])
+
+PRISMA CLIENT USAGE:
+- prisma.model.findMany()
+- prisma.model.create({ data: {...} })
+- prisma.model.update({ where: {...}, data: {...} })
+- prisma.model.delete({ where: {...} })
+- prisma.model.findUnique({ where: {...} })
+*/
+
+// This is your main Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ====================================================
+// GLOBAL/SHARED MODELS (Future auth, etc.) (no prefix)
+// ====================================================
+
+// Global/shared models across spaces (like future auth)
+// model User {
+//   id        String   @id @default(cuid())
+//   username  String   @unique
+//   email     String   @unique
+//   createdAt DateTime @default(now()) @map("created_at")
+//   updatedAt DateTime @updatedAt @map("updated_at")
+//   @@map("users") // (No "." so it'll be in the root)
+// }
+
+// ====================================================
+// DISCORD SPACE SCHEMA (prefix "discord.")
+// ====================================================
+
+model DiscordUsers {
+  discordId     String   @id @unique @map("discord_id") // Snowflake as string (verify at API level)
+  globalName    String   @map("global_name")
+  avatarHash    String?  @map("avatar_hash") // To construct avatar URLs
+  // Are we also allowed to store a token? If not handle with cookies/session only
+
+  accountCreated DateTime @map("account_created") // When the Discord account was created (obtain from API?)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("discord.user") // Model name is DiscordUser for seperation of other spaces, but table can still be named "user"
+  
+  // Virtual Reverse Relations
+  JoinedGuilds DiscordGuildMembers[]
+  SentEventSuggestions EventSuggestions[]
+  HostedEvents   DiscordEvents[] @relation("Host")
+  CoHostedEvents DiscordEventCoHosts[]
+  EventsApproved DiscordEvents[] @relation("Approver")
+}
+
+// Junction table for many-to-many relationship between DiscordUser and DiscordGuild
+model DiscordGuildMembers {
+  userId     String  @map("user_id") // Discord User Snowflake as string
+  guildId    String  @map("guild_id") // Discord Guild Snowflake as string
+
+  // Relevant App roles (Array of ENUMS, since a user can have multiple roles)
+  roles       DiscordGuildRole[] @default([MEMBER])
+
+  // Guild's actual roles could go in a discordRoles String[] if we want them
+
+  // Akin to metadata
+  joinedAt   DateTime @default(now()) @map("joined_at") // When the user joined the guild (can I get that from Discord?)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Virtual Relations
+  user      DiscordUsers  @relation(fields: [userId], references: [discordId])
+  guild     DiscordGuilds @relation(fields: [guildId], references: [guildId])
+
+  @@id([userId, guildId])
+  @@unique([userId, guildId])
+  @@map("discord.guild_member")
+}
+
+enum DiscordGuildRole {
+  // GUEST (only guest when not logged in?)
+  MEMBER          // Basic Member, can suggest basic events
+  EVENT_TEAM      // ^ + Part of the team, can suggest detailed events
+  EVENT_LEAD      // ^ + Part of the team, can approve or deny events and schedule them
+  MODERATOR       // Different team, does not have access to event management, but can moderate content (future moderator dashboard for guild activity measurement)
+  MODERATOR_LEAD  // ^ + Lead of the moderation team, can manage moderators and view analytics
+  ADMIN           // Access to it ALL ^^^ (only manually assignable by me)
+}
+
+model DiscordGuilds {
+  guildId       String  @id @unique @map("guild_id") // Snowflake as string (verify at API level) (NOTE: Will be just our server for the time being)
+  guildName     String  @map("guild_name")
+  iconHash      String? @map("icon_hash") // To construct icon URLs
+
+  builtAt       DateTime @default(now()) @map("built_at") // When the guild was authored on discord (obtain from API?)
+  createdAt     DateTime @default(now()) @map("created_at") // When the app first registered this guild
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Virtual Reverse Relations
+  Events DiscordEvents[]
+  EventSuggestions EventSuggestions[]
+  Members DiscordGuildMembers[]
+
+  @@map("discord.guild")
+}
+
+model EventSuggestions {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Foreign keys
+  authorId      String   @map("author_id") // DiscordUser.discordId
+  guildId       String   @map("guild_id") // DiscordGuild.guildId
+
+  // Virtual relations
+  author        DiscordUsers   @relation(fields: [authorId], references: [discordId])
+  guild         DiscordGuilds  @relation(fields: [guildId], references: [guildId])
+
+  @@map("discord.suggestion")
+}
+
+/* 
+  Event Team Application Model
+  Default fields:
+  id            String   @id @default(cuid())
+  guildId       String   @map("guild_id") // DiscordGuild.guildId
+  questions     Json     @map("questions") // Array of questions (could be text, multiple choice, etc.)
+    Said JSON content will roughly be in the form of:
+    [
+      {
+        "id": "[Arbitrary (unique?) question id]",
+        "type": "text" | "multiple_choice" | "checkbox" | etc.,
+        "question": "What is your favorite color?",
+        "options?": ["Red", "Blue", "Green"] // Only for multiple choice/checkbox
+      },
+      ...
+    ]
+
+  Event Team Application Response model
+  Default fields:
+  id            String   @id @default(cuid())
+  applicationId String   @map("application_id") // EventTeamApplications.id
+  applicantId   String   @map("applicant_id") // DiscordUsers.discordId
+  status        ApplicationStatus @default(PENDING) @map("status")
+  reviewedById  String?  @map("reviewed_by_id") // DiscordUsers
+  reviewedAt    DateTime? @map("reviewed_at")
+  interviewScheduledAt DateTime? @map("interview_scheduled_at")
+  answers      Json     @map("answers") // JSON object containing questionid-answer pairs
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  enum ApplicationStatus {
+    PENDING
+    PENDING_INTERVIEW
+    APPROVED
+    DENIED
+  }
+*/
+
+model DiscordEvents {
+  id            String   @id @default(cuid())
+  eventId       String?  @unique @map("event_id") // Discord Event ID when made on Discord (if applicable)
+  title         String
+  description   String
+  pingMessage   String   @map("ping_message") // Message to ping roles/users when event starts
+  scheduledFor  DateTime @map("scheduled_for") // When the event is scheduled to
+  expectedPrizes String? @map("expected_prizes") // Any expected prizes for participation (if applicable) (Future will be a relation to a Prizes table)
+  estimatedDuration Int  @map("estimated_duration") // In minutes (Used for scheduling conflict checks and calendar view)
+  approvalStatus ApprovalStatus @default(PENDING) @map("approval_status")
+  status        EventStatus @default(PERMISSION_PENDING)
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // Foreign keys
+  hostId        String   @map("host_id") // DiscordUser.discordId
+  approverId    String?  @map("approver_id") // DiscordUser.discordId
+  guildId       String   @map("guild_id") // DiscordGuild.guildId
+
+  // Virtual relations
+  host          DiscordUsers   @relation("Host", fields: [hostId], references: [discordId])
+  approver      DiscordUsers?  @relation("Approver", fields: [approverId], references: [discordId])
+  guild         DiscordGuilds  @relation(fields: [guildId], references: [guildId])
+
+  // Virtual Reverse Relations
+  coHosts       DiscordEventCoHosts[]
+  statistics    DiscordEventStatistics?
+  
+  @@map("discord.event")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum EventStatus {
+  PERMISSION_PENDING
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+model DiscordEventCoHosts {
+  eventId     String  @map("event_id") // DiscordEvents.id
+  coHostId    String  @map("co_host_id") // DiscordUsers.discordId
+  response    ApprovalStatus @default(PENDING) // Co-host's response to willingness to co-host
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Virtual Relations
+  event     DiscordEvents @relation(fields: [eventId], references: [id])
+  coHost    DiscordUsers  @relation(fields: [coHostId], references: [discordId])
+
+  @@id([eventId, coHostId])
+  @@map("discord.event_co_host")
+}
+
+model DiscordEventStatistics {
+  id            String   @id @default(cuid())
+  eventId       String   @unique @map("event_id") // DiscordEvents.id
+  startedAt     DateTime @map("started_at") // When the event actually started (for archive)
+  endedAt       DateTime @map("ended_at") // When the event actually ended (for archive)
+  averageAttendance Int  @map("average_attendance")
+  peakAttendance Int     @map("peak_attendance")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Virtual Relations
+  event         DiscordEvents @relation(fields: [eventId], references: [id]) // Not the discord event ID, but our internal ID as its possible the event isn't a discord internally created event
+
+  @@map("discord.event_statistics")
+}
+
+/*
+  Event sign up form model
+  Sometimes an event may require a sign-up form for participants.
+  Default fields:
+  id            String   @id @default(cuid())
+  eventId       String   @map("event_id") // DiscordEvents.id
+  questions     Json     @map("questions") // Array of questions (could be text, multiple choice, etc.)
+    Said JSON content will roughly be in the form of:
+    [
+      {
+        "id": "[Arbitrary (unique?) question id]",
+        "type": "text" | "multiple_choice" | "checkbox" | etc.,
+        "question": "What is your favorite color?",
+        "options?": ["Red", "Blue", "Green"] // Only for multiple choice/checkbox
+      },
+      ...
+    ]
+  published     Boolean  @default(false) @map("published") // Whether the form is published and accepting responses (no more edits to questions once published)
+  closed        Boolean  @default(false) @map("closed") // Whether the form is closed to new responses
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  We will also need a model for storing the responses to these forms:
+  EventSignUpResponses
+  Default fields:
+  id            String   @id @default(cuid())
+  eventId       String   @map("event_id") // DiscordEvents.id
+  responderId   String   @map("responder_id") // DiscordUsers.discordId
+  responses     Json     @map("responses") // Array of responses corresponding to the questions in the EventSignUpForm
+    Said JSON content will roughly be in the form of:
+    [
+      {
+        "questionId": "[Corresponding question id from EventSignUpForm]",
+        "response": "Blue" // Or ["Red", "Green"] for checkbox
+      },
+      ...
+    ]
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  Lastly an enum for question types:
+  enum QuestionType {
+    TEXT
+    MULTIPLE_CHOICE
+    CHECKBOX
+    // Add more as needed
+  }
+*/
+
+// ====================================================
+// [] SPACE SCHEMA (prefix "[].")
+// ====================================================
