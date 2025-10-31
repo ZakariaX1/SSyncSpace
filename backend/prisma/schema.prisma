@@ -54,6 +54,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+	schemas  = ["public", "discord"]
 }
 
 // ====================================================
@@ -84,7 +85,8 @@ model DiscordUsers {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  @@map("discord.user") // Model name is DiscordUser for seperation of other spaces, but table can still be named "user"
+  @@map("user") // Model name is DiscordUser for seperation of other spaces, but table can still be named "user"
+	@@schema("discord")
   
   // Virtual Reverse Relations
   JoinedGuilds DiscordGuildMembers[]
@@ -115,7 +117,8 @@ model DiscordGuildMembers {
 
   @@id([userId, guildId])
   @@unique([userId, guildId])
-  @@map("discord.guild_member")
+  @@map("guild_member")
+	@@schema("discord")
 }
 
 enum DiscordGuildRole {
@@ -126,6 +129,7 @@ enum DiscordGuildRole {
   MODERATOR       // Different team, does not have access to event management, but can moderate content (future moderator dashboard for guild activity measurement)
   MODERATOR_LEAD  // ^ + Lead of the moderation team, can manage moderators and view analytics
   ADMIN           // Access to it ALL ^^^ (only manually assignable by me)
+	@@schema("discord")
 }
 
 model DiscordGuilds {
@@ -142,11 +146,12 @@ model DiscordGuilds {
   EventSuggestions EventSuggestions[]
   Members DiscordGuildMembers[]
 
-  @@map("discord.guild")
+  @@map("guild")
+	@@schema("discord")
 }
 
 model EventSuggestions {
-  id            String   @id @default(cuid())
+  id            Int   @id @default(autoincrement())
   title         String
   description   String
 
@@ -161,7 +166,8 @@ model EventSuggestions {
   author        DiscordUsers   @relation(fields: [authorId], references: [discordId])
   guild         DiscordGuilds  @relation(fields: [guildId], references: [guildId])
 
-  @@map("discord.suggestion")
+  @@map("suggestion")
+	@@schema("discord")
 }
 
 /* 
@@ -204,7 +210,7 @@ model EventSuggestions {
 */
 
 model DiscordEvents {
-  id            String   @id @default(cuid())
+  id            Int 		 @id @default(autoincrement())
   eventId       String?  @unique @map("event_id") // Discord Event ID when made on Discord (if applicable)
   title         String
   description   String
@@ -232,13 +238,15 @@ model DiscordEvents {
   coHosts       DiscordEventCoHosts[]
   statistics    DiscordEventStatistics?
   
-  @@map("discord.event")
+  @@map("event")
+	@@schema("discord")
 }
 
 enum ApprovalStatus {
   PENDING
   APPROVED
   DENIED
+	@@schema("public")
 }
 
 enum EventStatus {
@@ -247,10 +255,11 @@ enum EventStatus {
   ONGOING
   COMPLETED
   CANCELLED
+	@@schema("discord")
 }
 
 model DiscordEventCoHosts {
-  eventId     String  @map("event_id") // DiscordEvents.id
+  eventId     Int  @map("event_id") // DiscordEvents.id
   coHostId    String  @map("co_host_id") // DiscordUsers.discordId
   response    ApprovalStatus @default(PENDING) // Co-host's response to willingness to co-host
 
@@ -262,12 +271,12 @@ model DiscordEventCoHosts {
   coHost    DiscordUsers  @relation(fields: [coHostId], references: [discordId])
 
   @@id([eventId, coHostId])
-  @@map("discord.event_co_host")
+  @@map("event_co_host")
+	@@schema("discord")
 }
 
 model DiscordEventStatistics {
-  id            String   @id @default(cuid())
-  eventId       String   @unique @map("event_id") // DiscordEvents.id
+  eventId       Int			 @id @unique @map("event_id") // DiscordEvents.id
   startedAt     DateTime @map("started_at") // When the event actually started (for archive)
   endedAt       DateTime @map("ended_at") // When the event actually ended (for archive)
   averageAttendance Int  @map("average_attendance")
@@ -279,7 +288,8 @@ model DiscordEventStatistics {
   // Virtual Relations
   event         DiscordEvents @relation(fields: [eventId], references: [id]) // Not the discord event ID, but our internal ID as its possible the event isn't a discord internally created event
 
-  @@map("discord.event_statistics")
+  @@map("event_statistics")
+	@@schema("discord")
 }
 
 /*
