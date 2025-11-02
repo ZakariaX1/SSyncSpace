@@ -1,9 +1,18 @@
 import { api } from '../../../utils/api';
 import { useApi } from '../../../hooks/useApi';
-import type { DiscordEventsResponse } from '../types';
+import type { DiscordEvent } from '../types';
+import { useParams } from 'react-router-dom';
 
 function Events() {
-  const { data: eventsData, loading, error } = useApi<DiscordEventsResponse>(() => api.discord.getEvents());
+  const { guildId } = useParams<{ guildId: string }>();
+  if (!guildId) {
+    return <div>Please select a guild to view its events.</div>;
+  }
+
+  const { data: eventsData, loading, error } = useApi<DiscordEvent[]>(
+    () => api.discord.getEvents(guildId),
+    [guildId]
+  );
 
   if (loading) return <div>Loading events...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -13,11 +22,11 @@ function Events() {
       <h3>Discord Events</h3>
       <p>Manage and schedule community events</p>
       
-      {eventsData && eventsData.events && (
+      {eventsData && (
         <div style={{ marginTop: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h4 style={{ color: 'var(--color-space-discord)' }}>
-              Upcoming Events ({eventsData.events.length})
+              Upcoming Events ({eventsData.length})
             </h4>
             <button style={{
               padding: '0.5rem 1rem',
@@ -31,7 +40,7 @@ function Events() {
             </button>
           </div>
           
-          {eventsData.events.map((event) => (
+          {eventsData.map((event) => (
             <div 
               key={event.id}
               style={{

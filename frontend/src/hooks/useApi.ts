@@ -1,26 +1,38 @@
-import { useState, useEffect } from 'react';
+import { type DependencyList, useEffect, useState } from 'react';
 
-export function useApi<T>(apiCall: () => Promise<T>) {
+export function useApi<T>(apiCall: () => Promise<T>, deps: DependencyList = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
         const result = await apiCall();
-        setData(result);
+        if (!cancelled) {
+          setData(result);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, deps);
 
   return { data, loading, error };
 }

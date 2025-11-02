@@ -35,6 +35,12 @@
   font-size: 1.25rem;
 }
 
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .navLinks {
   display: flex;
   gap: 1rem;
@@ -57,4 +63,47 @@
 .navLink.active {
   background-color: var(--color-space-discord);
   color: white;
+}
+
+.profileLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.profileLink:hover {
+  border-color: var(--color-space-discord);
+  transform: translateY(-1px);
+}
+
+.profileActive {
+  border-color: var(--color-space-discord);
+  box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
+}
+
+.profileAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+.profileFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--color-space-discord), #7289da);
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
