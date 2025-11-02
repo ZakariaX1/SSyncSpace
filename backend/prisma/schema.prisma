@@ -79,7 +79,9 @@ model DiscordUsers {
   discordId     String   @id @unique @map("discord_id") // Snowflake as string (verify at API level)
   globalName    String   @map("global_name")
   avatarHash    String?  @map("avatar_hash") // To construct avatar URLs
-  // Are we also allowed to store a token? If not handle with cookies/session only
+  
+  accessToken   String?  @map("access_token")  // OAuth2 Access Token from Discord (Encrypted at API level)
+  refreshToken  String?  @map("refresh_token") // OAuth2 Refresh Token from Discord (Encrypted at API level)
 
   accountCreated DateTime @map("account_created") // When the Discord account was created (obtain from API?)
   createdAt     DateTime @default(now()) @map("created_at")
@@ -90,7 +92,7 @@ model DiscordUsers {
   
   // Virtual Reverse Relations
   JoinedGuilds DiscordGuildMembers[]
-  SentEventSuggestions EventSuggestions[]
+  SentEventSuggestions DiscordEventSuggestions[]
   HostedEvents   DiscordEvents[] @relation("Host")
   CoHostedEvents DiscordEventCoHosts[]
   EventsApproved DiscordEvents[] @relation("Approver")
@@ -143,14 +145,14 @@ model DiscordGuilds {
 
   // Virtual Reverse Relations
   Events DiscordEvents[]
-  EventSuggestions EventSuggestions[]
+  EventSuggestions DiscordEventSuggestions[]
   Members DiscordGuildMembers[]
 
   @@map("guild")
 	@@schema("discord")
 }
 
-model EventSuggestions {
+model DiscordEventSuggestions {
   id            Int   @id @default(autoincrement())
   title         String
   description   String

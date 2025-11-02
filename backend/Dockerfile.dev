@@ -14,5 +14,8 @@ COPY . .
 # Expose port
 EXPOSE 3001
 
+# Generate Prisma Client during build
+RUN npx prisma generate
+
 # Start development server
 CMD ["npm", "run", "dev"]
