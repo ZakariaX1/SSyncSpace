@@ -1,0 +1,22 @@
+.card {
+    list-style: none;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    transition: box-shadow 0.3s ease;
+    width: 250px;
+}
+
+.icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+}
+
+.identifiers {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
