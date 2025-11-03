@@ -1,6 +1,6 @@
-import { api } from '../../../utils/api';
-import { useApi } from '../../../hooks/useApi';
-import type { DiscordEvent } from '../types';
+import { api } from '../../../../utils/api';
+import { useApi } from '../../../../hooks/useApi';
+import type { DiscordEvent } from '../../types';
 import { useParams } from 'react-router-dom';
 
 function Events() {

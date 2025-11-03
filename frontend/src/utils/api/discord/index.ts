@@ -28,6 +28,10 @@ export class DiscordApiClient extends BaseApiClient {
     return this.getRequest('/api/discord/guilds');
   }
 
+  async getGuild(guildId: string): Promise<DiscordGuild> {
+    return this.getRequest(`/api/discord/guilds/${guildId}`);
+  }
+
   // Ready for future modular expansion:
   // events = new EventsApi(this.baseUrl);
   // auth = new AuthApi(this.baseUrl);

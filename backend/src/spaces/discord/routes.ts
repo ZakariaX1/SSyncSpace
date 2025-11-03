@@ -336,6 +336,23 @@ router.get('/guilds', async (req, res) => {
   }
 });
 
+// Get guild by ID, only public info if not a member
+router.get('/guilds/:guildId', async (req, res) => {
+  const { guildId } = req.params;
+  
+  try {
+    const guild = await prisma.discordGuilds.findUnique({
+      where: { guildId }
+    });
+    if (!guild) {
+      return res.status(404).json({ error: 'Guild not found' });
+    }
+    res.json(guild);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch guild' });
+  }
+});
+
 // =================================
 // Guild -> Events
 // =================================
