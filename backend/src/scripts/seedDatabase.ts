@@ -1,6 +1,6 @@
-import { prisma } from '../database/prisma.js';
+import type { PrismaClient } from '../../prisma/generated/client.js';
 
-async function main() {
+export async function seedDatabase(prisma: PrismaClient) {
     console.log('🌱 Seeding database...');
 
     // Create your Discord server
@@ -83,12 +83,3 @@ async function main() {
 
     console.log('✅ Database seeded successfully!');
 }
-
-main()
-    .catch((e) => {
-        console.error('❌ Error seeding database:', e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });

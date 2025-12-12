@@ -48,12 +48,12 @@ PRISMA CLIENT USAGE:
 
 // This is your main Prisma schema file
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "./generated"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 	schemas  = ["public", "discord"]
 }
 

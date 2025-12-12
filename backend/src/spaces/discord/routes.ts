@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { prisma } from '../../database/prisma';
-import { ResponseStatus, ERROR_MESSAGES } from '../../utils/response.types';
-import { authenticateJWT } from '../../middleware/authMiddleware';
+import { prisma } from '../../database/prisma.js';
+import { ResponseStatus, ERROR_MESSAGES } from '../../utils/response.types.js';
+import { authenticateJWT } from '../../middleware/authMiddleware.js';
 import jwt from "jsonwebtoken";
-import { AuthenticatedRequest } from '../../types/requests';
-import { exchangeCode, refreshAccessToken, encryptToken, decryptToken } from './helpers/OAUTH2';
+import { AuthenticatedRequest } from '../../types/requests.js';
+import { exchangeCode, refreshAccessToken, encryptToken, decryptToken } from './helpers/OAUTH2.js';
 
 const router = Router();
 
