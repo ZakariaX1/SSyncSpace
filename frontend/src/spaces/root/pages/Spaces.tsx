@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import RootNav from '../components/RootNav';
 
 function Spaces() {
   const spaces = [
@@ -19,7 +18,6 @@ function Spaces() {
 
   return (
     <div>
-      <RootNav />
       <h2>Available Spaces</h2>
       <div style={{ display: 'grid', gap: '1rem', marginTop: '2rem' }}>
         {spaces.map((space) => (
