@@ -5,8 +5,8 @@
   --color-primary-dark: #3b82f6;
   --color-space-discord: #5865f2;
   --color-space-islam: #22c55e;
-  
-  --color-bg-primary: #0f172a;
+  /* Could use #0d1015 as well */
+  --color-bg-primary: #1E1E1E;
   --color-bg-secondary: #1e293b;
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #cbd5e1;
@@ -18,4 +18,24 @@ body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   line-height: 1.6;
+}
+
+.nav-link {
+  position: relative;
+  display: inline-block;
+}
+
+.nav-link::before {
+  content: ">";
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  color: var(--color-text-secondary);
+}
+
+.nav-link:hover::before,
+.nav-link:focus-visible::before {
+  opacity: 1;
 }
