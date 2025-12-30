@@ -97,19 +97,20 @@ router.post('/auth/login', async (req, res) => {
     })
 
     // Return the cookies to the client
-    res.cookie('ssyncspace_auth_token', jwtToken, {
+    const isDev = process.env.NODE_ENV !== 'production';
+    const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
-
-    res.cookie('ssyncspace_auth_refresh', jwtRefreshToken, {
+      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+    };
+    const refreshCookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+    };
+    
+    res.cookie('ssyncspace_auth_token', jwtToken, cookieOptions);
+    res.cookie('ssyncspace_auth_refresh', jwtRefreshToken, refreshCookieOptions);
 
     // Also supply the user data in the response body for convenience
     return res.json({
@@ -202,18 +203,20 @@ router.post('/auth/refresh', async (req, res) => {
 
     // TODO: Add a table with invalidated but not yet expired to prevent reuse until expiration if need be?
     
-    res.cookie('ssyncspace_auth_token', newToken, {
+    const isDev = process.env.NODE_ENV !== 'production';
+    const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
-    res.cookie('ssyncspace_auth_refresh', newRefreshToken, {
+      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+    };
+    const refreshCookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+    };
+    
+    res.cookie('ssyncspace_auth_token', newToken, cookieOptions);
+    res.cookie('ssyncspace_auth_refresh', newRefreshToken, refreshCookieOptions);
     
     return res.json({
       message: 'Token refreshed successfully',
