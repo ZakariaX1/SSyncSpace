@@ -101,12 +101,12 @@ router.post('/auth/login', async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 day
-      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+      ...(isDev ? {} : { secure: true, partitioned: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
     };
     const refreshCookieOptions = {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+      ...(isDev ? {} : { secure: true, partitioned: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
     };
     
     res.cookie('ssyncspace_auth_token', jwtToken, cookieOptions);
