@@ -12,6 +12,7 @@ function DiscordSpace() {
   return (
     <div>
       <DiscordNav />
+      <title>Discord Tools - SSyncSpace</title>
       <Routes>
         <Route index element={<Home />} />
         <Route path="guilds/" element={<Guilds />} />
