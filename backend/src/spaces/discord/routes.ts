@@ -120,6 +120,8 @@ router.post('/auth/login', async (req, res) => {
         globalName: user.globalName,
         avatarHash: user.avatarHash,
         accountCreated: user.accountCreated,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       },
     });
   } catch (error) {
