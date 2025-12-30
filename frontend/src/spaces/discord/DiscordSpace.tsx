@@ -7,12 +7,13 @@ import Profile from './pages/Profile';
 import DiscordNav from './components/DiscordNav';
 import GuildHome from './pages/Guild/GuildHome';
 import Events from './pages/Guild/Events';
+import { UserProvider } from './context/UserContext';
 
 function DiscordSpace() {
   return (
-    <div>
-      <DiscordNav />
+    <UserProvider>
       <title>Discord Tools - SSyncSpace</title>
+      <DiscordNav />
       <Routes>
         <Route index element={<Home />} />
         <Route path="guilds/" element={<Guilds />} />
@@ -22,7 +23,7 @@ function DiscordSpace() {
         <Route path="profile" element={<Profile />} />
         <Route path="auth/callback/" element={<OAUTH2Callback />} />
       </Routes>
-    </div>
+    </UserProvider>
   );
 }
 

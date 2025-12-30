@@ -1,5 +1,5 @@
 import { BaseApiClient } from '../base';
-import type { DiscordEvent, DiscordGuild, DiscordUserProfile } from '../../../spaces/discord/types';
+import type { DiscordEvent, DiscordGuild, DiscordUserLoginResponse, DiscordUserProfile } from '../../../spaces/discord/types';
 import type { ApiInfoResponse } from '../../../types/global';
 
 
@@ -8,7 +8,7 @@ export class DiscordApiClient extends BaseApiClient {
     return this.getRequest('/api/discord/info');
   }
 
-  async login(code: string): Promise<any> {
+  async login(code: string): Promise<DiscordUserLoginResponse> {
     return this.postRequest('/api/discord/auth/login', { code });
   }
 

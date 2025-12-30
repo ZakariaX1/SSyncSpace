@@ -1,15 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+// import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import styles from './DiscordNav.module.css';
-import { discordApi } from '../../../utils/api/discord';
-import type { DiscordUserProfile } from '../types';
-import { AUTH_STATE_CHANGED_EVENT } from '../../../utils/auth/events';
+// import { discordApi } from '../../../utils/api/discord';
+// import type { DiscordUserProfile } from '../types';
+// import { AUTH_STATE_CHANGED_EVENT } from '../../../utils/auth/events';
+import { useUser } from '../context/UserContext';
 
 const DiscordNav = () => {
-  const location = useLocation();
-  const [profile, setProfile] = useState<DiscordUserProfile | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const isMountedRef = useRef(true);
+  const { user, loading } = useUser();
 
   // Determine whether a navigation link should be highlighted as active.
   const isActive = (path: string) => {
@@ -26,50 +24,11 @@ const DiscordNav = () => {
     { name: 'Events', path: '/guilds/552953312073220096/events' },
   ];
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const loadProfile = useCallback(async () => {
-    if (isMountedRef.current) {
-      setLoadingProfile(true);
-    }
-    try {
-      const result = await discordApi.getProfile();
-      if (isMountedRef.current) {
-        setProfile(result ?? null);
-      }
-    } catch (error) {
-      if (isMountedRef.current) {
-        setProfile(null);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setLoadingProfile(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    // Load the profile once on mount.
-    loadProfile();
-
-    // Allow other parts of the app to request a refresh (e.g. after logout).
-    window.addEventListener(AUTH_STATE_CHANGED_EVENT, loadProfile);
-
-    return () => {
-      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, loadProfile);
-    };
-  }, [loadProfile]);
-
-  const avatarUrl = profile?.avatarHash
-    ? `https://cdn.discordapp.com/avatars/${profile.discordId}/${profile.avatarHash}.${profile.avatarHash.startsWith('a_') ? 'gif' : 'png'}?size=64`
+  const avatarUrl = user?.avatarHash
+    ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatarHash}.${user.avatarHash.startsWith('a_') ? 'gif' : 'png'}?size=64`
     : null;
 
-  const profileInitial = profile?.globalName?.charAt(0).toUpperCase() ?? 'U';
+  const profileInitial = user?.globalName?.charAt(0).toUpperCase() ?? 'U';
 
   return (
     <nav className={styles.nav}>
@@ -87,7 +46,7 @@ const DiscordNav = () => {
                 {item.name}
               </Link>
             ))}
-            {!loadingProfile && !profile && (
+            {!loading && !user && (
               <Link
                 to="/login"
                 className={`${styles.navLink} ${isActive('/login') ? styles.active : ''}`}
@@ -97,7 +56,7 @@ const DiscordNav = () => {
             )}
           </div>
 
-          {!loadingProfile && profile && (
+          {!loading && user && (
             <Link
               to="/profile"
               className={`${styles.profileLink} ${isActive('/profile') ? styles.profileActive : ''}`}

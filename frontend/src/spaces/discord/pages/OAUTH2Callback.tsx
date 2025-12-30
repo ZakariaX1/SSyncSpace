@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { discordApi } from '../../../utils/api/discord';
 import { AUTH_STATE_CHANGED_EVENT } from '../../../utils/auth/events';
+import { useUser } from '../context/UserContext';
 
 function OAUTH2Callback() {
   // Keep track of what we are doing so the user sees progress updates.
   const [status, setStatus] = useState('Hang tight while we get things ready for you...');
   const navigate = useNavigate();
+  const { login } = useUser();
 
   // Discord sends us back with a "code" query param after the user authorises.
   const params = new URLSearchParams(window.location.search);
@@ -25,7 +27,7 @@ function OAUTH2Callback() {
       try {
         setStatus('Checking your Discord account...');
         // Ask our backend to exchange the code for tokens and set secure cookies.
-        await discordApi.login(code);
+        const { user } = await discordApi.login(code);
         // Notify the rest of the app that authentication state changed so the
         // navigation bar (and any other listeners) can refresh user data.
         window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
@@ -34,6 +36,7 @@ function OAUTH2Callback() {
         }
 
         setStatus('All set! Redirecting you now...');
+        login(user ?? null)
         // Give the user a short moment to read the success message before redirecting.
         setTimeout(() => {
           if (!cancelled) {
@@ -52,7 +55,7 @@ function OAUTH2Callback() {
     return () => {
       cancelled = true;
     };
-  }, [code, navigate]);
+  }, []);
 
   return (
     <div>
