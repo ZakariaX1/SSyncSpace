@@ -6,7 +6,7 @@ function Login() {
     const responseType = 'code';
     const discordOauth2Url = import.meta.env.VITE_DISCORD_OAUTH2_URL;
     
-    const oauth2Url = `${discordOauth2Url}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scope}`;
+    const oauth2Url = `${discordOauth2Url}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scope}&prompt=none`;
     return (
         <div>
             <h2>Discord Login</h2>

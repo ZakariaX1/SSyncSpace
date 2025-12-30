@@ -28,7 +28,7 @@ function OAUTH2Callback() {
         await discordApi.login(code);
         // Notify the rest of the app that authentication state changed so the
         // navigation bar (and any other listeners) can refresh user data.
-  window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
+        window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
         if (cancelled) {
           return;
         }
