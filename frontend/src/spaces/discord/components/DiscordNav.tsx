@@ -13,17 +13,17 @@ const DiscordNav = () => {
 
   // Determine whether a navigation link should be highlighted as active.
   const isActive = (path: string) => {
-    if (path === '/discord') {
-      return location.pathname === '/discord';
+    if (path === '/') {
+      return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
   };
 
   // Common navigation items that are always visible to the user.
   const discordNavItems = [
-    { name: 'Home', path: '/discord' },
-    { name: 'Guilds', path: '/discord/guilds' },
-    { name: 'Events', path: '/discord/guilds/552953312073220096/events' },
+    { name: 'Home', path: '/' },
+    { name: 'Guilds', path: '/guilds' },
+    { name: 'Events', path: '/guilds/552953312073220096/events' },
   ];
 
   useEffect(() => {
@@ -89,8 +89,8 @@ const DiscordNav = () => {
             ))}
             {!loadingProfile && !profile && (
               <Link
-                to="/discord/login"
-                className={`${styles.navLink} ${isActive('/discord/login') ? styles.active : ''}`}
+                to="/login"
+                className={`${styles.navLink} ${isActive('/login') ? styles.active : ''}`}
               >
                 Login
               </Link>
@@ -99,8 +99,8 @@ const DiscordNav = () => {
 
           {!loadingProfile && profile && (
             <Link
-              to="/discord/profile"
-              className={`${styles.profileLink} ${isActive('/discord/profile') ? styles.profileActive : ''}`}
+              to="/profile"
+              className={`${styles.profileLink} ${isActive('/profile') ? styles.profileActive : ''}`}
               aria-label="View profile"
             >
               {avatarUrl ? (

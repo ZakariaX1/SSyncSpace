@@ -20,7 +20,7 @@ export function GuildListCard({ guild }: GuildCardProps) {
 				<h3 className={styles.title}>{guild.guildName}</h3>
 			</div>
 			<p className={styles.info} >On our platform since: {new Date(guild.createdAt).toLocaleDateString()}</p>
-			<button onClick={() => navigate(`/discord/guilds/${guild.guildId}`)}>
+			<button onClick={() => navigate(`/guilds/${guild.guildId}`)}>
 				Show {guild.guildName}'s server contents
 			</button>
 		</li>

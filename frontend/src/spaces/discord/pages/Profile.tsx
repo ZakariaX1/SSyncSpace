@@ -25,7 +25,7 @@ function Profile() {
           if (err instanceof Error && err.message.includes('401')) {
             // Most likely a 401 (not logged in). Send the user to the login page.
             setError('You need to log in to view your profile.');
-            navigate('/discord/login');
+            navigate('/login');
           } else {
             setError('Failed to load your profile. Please try again later.');
           }
@@ -49,7 +49,7 @@ function Profile() {
     await discordApi.logout();
     // Let the rest of the app know auth state changed so nav/user data refresh.
     window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT));
-      navigate('/discord/login');
+      navigate('/login');
     } catch (err) {
       setError('Failed to log out. Please try again.');
     }

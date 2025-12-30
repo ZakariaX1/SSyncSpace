@@ -37,7 +37,7 @@ function OAUTH2Callback() {
         // Give the user a short moment to read the success message before redirecting.
         setTimeout(() => {
           if (!cancelled) {
-            navigate('/discord');
+            navigate('/');
           }
         }, 1000);
       } catch (error) {
