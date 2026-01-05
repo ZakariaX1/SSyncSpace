@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import RootNav from '../components/RootNav';
 
 const SpaceType = {
   Maintainance: "Maintainance",
@@ -86,7 +85,7 @@ function SpaceInformation({ space }: { space: SpaceCardContent | null }) {
         <div className='mr-10'>
           <div className="text-sm text-gray-300">- Space Discovered: {space.spaceDiscoveredAt}</div>
           <div className="text-sm text-gray-300">- Route modified: {space.routeModifiedAt ?? '-'}</div>
-          
+
           <div className='my-4'>
             <button
               type="button"
@@ -244,7 +243,6 @@ function Spaces() {
   
 
   return <>
-      <RootNav/>
       <div className='flex p-12'>
         <div className='w-2/10'>
           <div className='text-3xl pb-5 border-b-2 border-gray-500'>Spaces</div>

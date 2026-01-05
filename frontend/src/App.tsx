@@ -1,15 +1,14 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useMemo } from 'react';
-import Home from './spaces/root/pages/Home';
-import About from './spaces/root/pages/About';
-import Portfolio from './spaces/root/pages/Portfolio';
-import Spaces from './spaces/root/pages/Spaces';
 import IslamSpace from './spaces/islam/IslamSpace';
 import DiscordSpace from './spaces/discord/DiscordSpace';
 import styles from './App.module.css';
+import RootSpace from './spaces/root/RootSpace';
 
 function App() {
   // Detect subdomain and determine which space to render
+  // NOTE: Very hacky way of splitting subdomains, but for now as a small app it's fine,
+  //   but in the future will use a reverse proxy which should also look nicer in the code.
   const currentSpace = useMemo(() => {
     const rootHost = import.meta.env.VITE_ROOT_WEBURL ?? window.location.host;
     const rootHostname = rootHost.split(':')[0]; // e.g., "localhost" from "localhost:5173"
@@ -54,16 +53,13 @@ function App() {
     <Router>
       <div className={styles.app}>
         <main className={styles.main}>
-          <Routes>
-            {/* Root Space Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/spaces" element={<Spaces />} />
-            
+          <Routes>            
             {/* Fallback path-based routing for development */}
             <Route path="/islam/*" element={<IslamSpace />} />
             <Route path="/discord/*" element={<DiscordSpace />} />
+
+            {/* Root Space Routes */}
+            <Route path="/*" element={<RootSpace />} />
 
           </Routes>
         </main>

@@ -1,8 +1,5 @@
-import RootNav from "../components/RootNav.js"
-
 export default function Home() {
   return <>
-    <RootNav/>
     <div className="p-5 ml-8">
       <div className="flex">
         <div className="w-5/8">

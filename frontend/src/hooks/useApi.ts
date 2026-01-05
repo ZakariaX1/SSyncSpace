@@ -1,5 +1,6 @@
 import { type DependencyList, useEffect, useState } from 'react';
 
+// TODO: Redundant if we just use React Query, no need to reinvent the wheel :D
 export function useApi<T>(apiCall: () => Promise<T>, deps: DependencyList = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
