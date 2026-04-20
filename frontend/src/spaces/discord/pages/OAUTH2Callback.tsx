@@ -4,17 +4,32 @@ import { discordApi } from '../../../utils/api/discord';
 import { AUTH_STATE_CHANGED_EVENT } from '../../../utils/auth/events';
 import { useUser } from '../context/UserContext';
 
+const OAUTH_STATE_KEY = 'ssyncspace_discord_oauth_state';
+
 function OAUTH2Callback() {
   // Keep track of what we are doing so the user sees progress updates.
   const [status, setStatus] = useState('Hang tight while we get things ready for you...');
   const navigate = useNavigate();
   const { login } = useUser();
 
-  // Discord sends us back with a "code" query param after the user authorises.
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-
   useEffect(() => {
+    // Discord sends us back with auth parameters after the user authorizes.
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const returnedState = params.get('state');
+    const expectedState = sessionStorage.getItem(OAUTH_STATE_KEY);
+
+    console.log("got: " + returnedState);
+    console.log("expected: " + expectedState);
+
+    // Clear state once we read it so it cannot be replayed later.
+    sessionStorage.removeItem(OAUTH_STATE_KEY);
+
+    if (!returnedState || !expectedState || returnedState !== expectedState) {
+      setStatus('Invalid login state. Please restart the login process.');
+      return;
+    }
+
     // When there is no code we cannot continue, so let the user know immediately.
     if (!code) {
       setStatus('Authorization code missing. Please restart the login process.');
@@ -55,7 +70,7 @@ function OAUTH2Callback() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [login, navigate]);
 
   return (
     <div>

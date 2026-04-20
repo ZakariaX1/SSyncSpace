@@ -1,12 +1,34 @@
-function Login() {
+import { useMemo } from 'react';
 
+const OAUTH_STATE_KEY = 'ssyncspace_discord_oauth_state';
+
+function generateOAuthState(): string {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const binary = String.fromCharCode(...bytes);
+
+    // Use base64url so the value is URL-safe without extra escaping.
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+}
+
+function Login() {
     const scope = encodeURIComponent('identify guilds');
     const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
     const redirectUri = encodeURIComponent(import.meta.env.VITE_DISCORD_REDIRECT_URI);
     const responseType = 'code';
     const discordOauth2Url = import.meta.env.VITE_DISCORD_OAUTH2_URL;
+
+    const oauthState = useMemo(() => {
+        const state = generateOAuthState();
+        sessionStorage.setItem(OAUTH_STATE_KEY, state);
+        console.log("Made State")
+        return state;
+    }, []);
     
-    const oauth2Url = `${discordOauth2Url}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scope}&prompt=none`;
+    const oauth2Url = `${discordOauth2Url}?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=${responseType}&scope=${scope}&prompt=none&state=${oauthState}`;
     return (
         <div>
             <h2>Discord Login</h2>

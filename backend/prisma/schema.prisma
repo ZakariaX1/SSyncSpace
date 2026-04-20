@@ -96,6 +96,26 @@ model DiscordUsers {
   HostedEvents   DiscordEvents[] @relation("Host")
   CoHostedEvents DiscordEventCoHosts[]
   EventsApproved DiscordEvents[] @relation("Approver")
+  refreshTokenRotations RefreshTokenRotation[]
+}
+
+model RefreshTokenRotation {
+  id            Int     @id @default(autoincrement()) @map("id")
+  user_id       String  @map("user_id")
+  tokenHash     String  @map("token_hash")
+  device_name   String  @map("device_name")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  expiresAt     DateTime @map("expires_at")
+  lastUsedAt    DateTime @map("last_used_at")
+  revokedAt     DateTime? @map("revoked_at") // Null if not revoked, timestamp if revoked
+
+   // Virtual relation
+  user          DiscordUsers @relation(fields: [user_id], references: [discordId])
+
+  @@map("refresh_token_rotation")
+  @@schema("discord")
 }
 
 // Junction table for many-to-many relationship between DiscordUser and DiscordGuild

@@ -3,8 +3,28 @@ import { useApi } from '../../../../hooks/useApi';
 import type { DiscordEvent } from '../../types';
 import { useParams } from 'react-router-dom';
 
+// TODO: Fix React Hook violation (useApi called conditionally).
+// Problem: Hook is called AFTER an early return at line ~8.
+// React hooks MUST be called in the same order on every render.
+// 
+// Solution:
+// 1. Move the hook call to the TOP of the component, before any returns.
+// 2. Keep the early return for rendering, but call the hook unconditionally.
+// 3. Example:
+//   const { data: eventsData, loading, error } = useApi(...);  // Always called
+//   if (!guildId) return <div>...</div>;  // Conditional render OK
+// 
+// This is called the "Rules of Hooks" pattern.
+
 function Events() {
   const { guildId } = useParams<{ guildId: string }>();
+  
+  // TODO: Move hook here (before early return):
+  // const { data: eventsData, loading, error } = useApi<DiscordEvent[]>(
+  //   () => api.discord.getEvents(guildId!),  // Use ! if guildId can be undefined
+  //   [guildId]
+  // );
+  
   if (!guildId) {
     return <div>Please select a guild to view its events.</div>;
   }

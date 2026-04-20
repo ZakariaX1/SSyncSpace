@@ -12,6 +12,19 @@ export class DiscordApiClient extends BaseApiClient {
     return this.postRequest('/api/discord/auth/login', { code });
   }
 
+  // HINT: Add a refresh method here that calls POST /auth/refresh with NO body.
+  // The browser's credentials: 'include' already handles sending the HttpOnly cookie.
+  // Example pattern:
+  // async refresh(): Promise<void> {
+  //   return this.postRequest('/auth/refresh', {});
+  // }
+  //
+  // This method will:
+  // 1. Browser auto-sends HttpOnly refresh cookie
+  // 2. Backend validates cookie, generates new pair
+  // 3. Browser receives new cookies (automatically stored as HttpOnly)
+  // 4. No sensitive token data ever appears in client code or logs
+
   async logout(): Promise<void> {
     return this.postRequest('/api/discord/auth/logout', {});
   }

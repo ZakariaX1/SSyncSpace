@@ -1,14 +1,20 @@
-import { Router } from 'express';
+import { CookieOptions, Router } from 'express';
 import { prisma } from '../../database/prisma.js';
 import { ResponseStatus, ERROR_MESSAGES } from '../../utils/response.types.js';
 import { authenticateJWT } from '../../middleware/authMiddleware.js';
 import jwt from "jsonwebtoken";
 import { AuthenticatedRequest } from '../../types/requests.js';
 import { exchangeCode, refreshAccessToken, encryptToken, decryptToken } from './helpers/OAUTH2.js';
+import { createHash } from 'crypto';
 
 const router = Router();
 
 const SNOWFLAKE_REGEX = /^\d{17,19}$/;
+const REFRESH_TOKEN_ROTATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function hashRefreshToken(refreshToken: string): string {
+  return createHash('sha256').update(refreshToken).digest('hex');
+}
 
 // ===================================
 // General info
@@ -18,7 +24,10 @@ router.get('/info', (req, res) => {
   res.json({
     space: 'discord',
     message: 'Discord space API is working!',
-    availableEndpoints: ['/info', '/events']
+    availableEndpoints: [
+      '/info (this one!)',
+      'More public endpoints coming soon'
+    ]
   });
 });
 
@@ -31,7 +40,8 @@ router.get('/info', (req, res) => {
 // (Reference: https://discord.com/developers/docs/topics/oauth2#oauth2)
 // Then we see if the profile exists in our DB, if not we create it, else we update it. And we store their discord tokens
 //  securely for future user updates like changed username, avatar, etc.
-// Lastly we generate our own JWT token for our app's authentication and send it back to the frontend.
+// Lastly we generate our own JWT token for our app's authentication, store the refresh token for revokation functionality
+//  and finally send it back to the frontend.
 router.post('/auth/login', async (req, res) => {
   const { code } = req.body;
   if (!code) {
@@ -44,6 +54,7 @@ router.post('/auth/login', async (req, res) => {
     const tokenData = await exchangeCode(code);
     const access_token = tokenData.access_token;
     const refresh_token = tokenData.refresh_token;
+    const deviceName = req.get('user-agent') ?? 'unknown';
     
     // Fetch user data from Discord
     // (Referencing: https://discord.com/developers/docs/resources/user#user-object)
@@ -85,32 +96,21 @@ router.post('/auth/login', async (req, res) => {
       }
     });
 
-    const payload = {
-      discordId: user.discordId,
-    };
+    const { cookie, refreshCookie } = makeJWTTokens(user);
+    const now = new Date();
 
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET!, {
-      expiresIn: '24h', // Token valid for one days
-    })
-    const jwtRefreshToken = jwt.sign(payload, process.env.JWT_SECRET!, {
-      expiresIn: '7d', // Token valid for 7 days
-    })
+    await prisma.refreshTokenRotation.create({
+      data: {
+        user_id: user.discordId,
+        tokenHash: hashRefreshToken(refreshCookie.val),
+        device_name: deviceName,
+        expiresAt: new Date(Date.now() + REFRESH_TOKEN_ROTATION_TTL_MS),
+        lastUsedAt: now,
+      },
+    });
 
-    // Return the cookies to the client
-    const isDev = process.env.NODE_ENV !== 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-      ...(isDev ? {} : { secure: true, partitioned: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
-    };
-    const refreshCookieOptions = {
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      ...(isDev ? {} : { secure: true, partitioned: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
-    };
-    
-    res.cookie('ssyncspace_auth_token', jwtToken, cookieOptions);
-    res.cookie('ssyncspace_auth_refresh', jwtRefreshToken, refreshCookieOptions);
+    res.cookie(cookie.name, cookie.val, cookie.options);
+    res.cookie(refreshCookie.name, refreshCookie.val, refreshCookie.options)
 
     // Also supply the user data in the response body for convenience
     return res.json({
@@ -132,12 +132,20 @@ router.post('/auth/login', async (req, res) => {
   }    
 });
 
+// Refresh flow is cookie-based now:
+// - the browser sends ssyncspace_auth_refresh automatically
+// - the backend reads it from req.cookies
+// - the backend issues new HttpOnly cookies on success
+//
+// Remaining work: token rotation + reuse detection.
+// That will require a rotation table so stolen refresh tokens can be revoked when reused.
+
 // Refresh our own JWT token (also discord's OAUTH2 token for synchronized token expiration)
 router.post('/auth/refresh', async (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.cookies?.ssyncspace_auth_refresh;
   if (!refreshToken) {
-    return res.status(ResponseStatus.BAD_REQUEST).json({
-      error: ERROR_MESSAGES.FORBIDDEN
+    return res.status(ResponseStatus.UNAUTHORIZED).json({
+      error: ERROR_MESSAGES.UNAUTHORIZED
     });
   }
 
@@ -151,16 +159,20 @@ router.post('/auth/refresh', async (req, res) => {
 
     const user = await prisma.discordUsers.findUnique({
       where: { discordId: decoded.discordId },
-      select: { refreshToken: true }
+      select: { discordId: true, refreshToken: true }
     });
     
     if (!user) {
+      // TODO: Log somewhere that an invalid discordId was passed and check if they ever existed in the
+      //  database if not, somehow they figured out a way to encode a discordId that I'm able to decode,
+      //  which would mean they have the JWT secret.
       return res.status(ResponseStatus.NOT_FOUND).json({
         error: ERROR_MESSAGES.DISCORD_USER_NOT_FOUND
       });
     }
 
     if (!user.refreshToken) {
+      // No discord OAUTH2 refresh token stored in database, somehow...
       return res.status(ResponseStatus.FORBIDDEN).json({
         error: ERROR_MESSAGES.FORBIDDEN
       });
@@ -168,6 +180,20 @@ router.post('/auth/refresh', async (req, res) => {
 
     // Decrypt stored refresh token
     const decryptedRefreshToken = decryptToken(user.refreshToken);
+
+    const refreshTokenHashed = hashRefreshToken(refreshToken);
+    const refreshTokenRotation = await prisma.refreshTokenRotation.findFirst({
+      where: { user_id: decoded.discordId, tokenHash: refreshTokenHashed, revokedAt: null },
+      select: { id: true, device_name: true },
+    });
+
+    if (!refreshTokenRotation) {
+      return res.status(ResponseStatus.FORBIDDEN).json({
+        error: ERROR_MESSAGES.FORBIDDEN
+      });
+    }
+
+    // Refresh the Discord Access Token
     const tokenData = await refreshAccessToken(decryptedRefreshToken);
 
     const discordUserResponse = await fetch(`${process.env.DISCORD_API_ENDPOINT}/users/@me`, {
@@ -181,45 +207,42 @@ router.post('/auth/refresh', async (req, res) => {
     }
 
     const discordUserData = await discordUserResponse.json();
-    
-    // Update stored tokens
-    await prisma.discordUsers.update({
-      where: { discordId: decoded.discordId },
-      data: {
-        // In case of a new profile or name
-        globalName: discordUserData.global_name,
-        avatarHash: discordUserData.avatar,
-        // New tokens
-        accessToken: encryptToken(tokenData.access_token),
-        refreshToken: encryptToken(tokenData.refresh_token),
-      }
-    });
-    
-    // Generate new Token pair
-    const newToken = jwt.sign({ discordId: decoded.discordId }, process.env.JWT_SECRET!, {
-      expiresIn: '24h',
-    });
-    const newRefreshToken = jwt.sign({ discordId: decoded.discordId }, process.env.JWT_SECRET!, {
-      expiresIn: '7d',
-    });
 
-    // TODO: Add a table with invalidated but not yet expired to prevent reuse until expiration if need be?
-    
-    const isDev = process.env.NODE_ENV !== 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
-    };
-    const refreshCookieOptions = {
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      ...(isDev ? {} : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
-    };
-    
-    res.cookie('ssyncspace_auth_token', newToken, cookieOptions);
-    res.cookie('ssyncspace_auth_refresh', newRefreshToken, refreshCookieOptions);
-    
+    const { cookie, refreshCookie } = makeJWTTokens(user);
+    const now = new Date();
+    await prisma.$transaction([
+      prisma.discordUsers.update({
+        where: { discordId: decoded.discordId },
+        data: {
+          // In case of a new name or avatar
+          // TODO: Apply DTO fallback logic here.
+          globalName: discordUserData.global_name || discordUserData.username || 'UnknownUser',
+          avatarHash: discordUserData.avatar,
+          // New tokens
+          accessToken: encryptToken(tokenData.access_token),
+          refreshToken: encryptToken(tokenData.refresh_token),
+        }
+      }),
+      prisma.refreshTokenRotation.update({
+        where: { id: refreshTokenRotation.id },
+        data: {
+          revokedAt: now,
+          lastUsedAt: now,
+        },
+      }),
+      prisma.refreshTokenRotation.create({
+        data: {
+          user_id: decoded.discordId,
+          tokenHash: hashRefreshToken(refreshCookie.val),
+          device_name: refreshTokenRotation.device_name,
+          expiresAt: new Date(Date.now() + REFRESH_TOKEN_ROTATION_TTL_MS),
+          lastUsedAt: now,
+        },
+      }),
+    ]);
+
+    res.cookie(cookie.name, cookie.val, cookie.options);
+    res.cookie(refreshCookie.name, refreshCookie.val, refreshCookie.options)
     return res.json({
       message: 'Token refreshed successfully',
     });
@@ -231,20 +254,102 @@ router.post('/auth/refresh', async (req, res) => {
   }
 });
 
+type CookieArgs = {name: string, val: string, options: CookieOptions};
+function makeJWTTokens(user: {discordId: string}): {
+  cookie: CookieArgs,
+  refreshCookie: CookieArgs,
+} {
+  // (Payload for the JWT Token, not the response)
+  const payload = {
+    discordId: user.discordId,
+  };
+  
+  // Generate new Token pair
+  const newToken = jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: '24h',
+  });
+  const newRefreshToken = jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: '7d',
+  });
+
+  const isDev = process.env.NODE_ENV !== 'production';
+  const devCrossSiteCookieOptions: CookieOptions = {
+    secure: true,
+    sameSite: 'none',
+    partitioned: true,
+  };
+  const cookieOptions = {
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    ...(isDev
+      ? devCrossSiteCookieOptions
+      : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+  };
+  const refreshCookieOptions = {
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    ...(isDev
+      ? devCrossSiteCookieOptions
+      : { secure: true, sameSite: 'lax' as const, domain: process.env.COOKIE_DOMAIN })
+  };
+
+  return {
+    cookie: {
+      name: process.env.AUTH_COOKIE_NAME ?? 'ssyncspace_cookie_name',
+      val: newToken,
+      options: cookieOptions
+    },
+    refreshCookie: {
+      name: process.env.REFRESH_COOKIE_NAME ?? 'ssyncspace_refresh_cookie_name',
+      val: newRefreshToken,
+      options: refreshCookieOptions
+    }
+  };
+}
+
 router.post('/auth/logout', authenticateJWT, async (req: AuthenticatedRequest, res) => {
   const requestingUser = req.user;
+  const refreshToken = req.cookies?.ssyncspace_auth_refresh;
   try {
-    // For logout we can simply clear the cookies on the client side and remove
-    //  the discord tokens from our DB for security reasons.
+    const now = new Date();
+    if (requestingUser?.discordId && refreshToken) {
+      await prisma.refreshTokenRotation.updateMany({
+        where: {
+          user_id: requestingUser.discordId,
+          tokenHash: hashRefreshToken(refreshToken),
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: now,
+          lastUsedAt: now,
+        },
+      });
+    }
+
+    // Clear the current browser session cookies.
     res.clearCookie('ssyncspace_auth_token');
     res.clearCookie('ssyncspace_auth_refresh');
-    await prisma.discordUsers.updateMany({
-      where: { discordId: requestingUser?.discordId },
-      data: {
-        accessToken: null,
-        refreshToken: null,
+
+    if (requestingUser?.discordId) {
+      const activeSessionCount = await prisma.refreshTokenRotation.count({
+        where: {
+          user_id: requestingUser.discordId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+      });
+
+      // If this was the last active session, remove Discord tokens from the user record.
+      if (activeSessionCount === 0) {
+        await prisma.discordUsers.updateMany({
+          where: { discordId: requestingUser.discordId },
+          data: {
+            accessToken: null,
+            refreshToken: null,
+          }
+        });
       }
-    });
+    }
     
     return res.json({
       message: 'Logout successful',
